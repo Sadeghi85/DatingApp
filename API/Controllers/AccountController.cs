@@ -1,5 +1,7 @@
 using API.Data;
 using API.Entities;
+using API.Interfaces;
+using API.ViewModels.Output;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,13 +17,15 @@ namespace API.Controllers {
 	[ApiController]
 	public class AccountController : BaseApiController {
 		private readonly DataContext _context;
+		private readonly ITokenService _tokenService;
 
-		public AccountController(DataContext context) {
+		public AccountController(DataContext context, ITokenService tokenService) {
 			_context = context;
+			_tokenService = tokenService;
 		}
 
 		[HttpPost("register")]
-		public async Task<ActionResult<User>> Register(ViewModels.Input.RegisterDto registerDto) {
+		public async Task<ActionResult<UserDto>> Register(ViewModels.Input.RegisterDto registerDto) {
 
 			if (await UserExistsAsync(registerDto.Username)) {
 				return BadRequest("Username is taken");
@@ -38,10 +42,13 @@ namespace API.Controllers {
 			_context.Users.Add(user);
 			await _context.SaveChangesAsync();
 
-			return user;
+			return new UserDto() {
+				Username = user.UserName,
+				Token = _tokenService.CreateToken(user)
+			};
 		}
 		[HttpPost("login")]
-		public async Task<ActionResult<User>> Login(ViewModels.Input.LoginDto loginDto) {
+		public async Task<ActionResult<UserDto>> Login(ViewModels.Input.LoginDto loginDto) {
 			var user = await _context.Users.SingleOrDefaultAsync(x => x.UserName == loginDto.Username.ToLower());
 
 			if (null == user)
@@ -52,7 +59,10 @@ namespace API.Controllers {
 			var passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
 
 			if (passwordHash.SequenceEqual(user.PasswordHash)) {
-				return user;
+				return new UserDto() {
+					Username = user.UserName,
+					Token = _tokenService.CreateToken(user)
+				};
 			} else {
 				return Unauthorized("Invalid password");
 			}

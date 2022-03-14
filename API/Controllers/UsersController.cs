@@ -1,5 +1,6 @@
 using API.Data;
 using API.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ namespace API.Controllers {
 			_context = context;
 		}
 
+		[Authorize]
 		[HttpGet]
 		public async Task<ActionResult<IEnumerable<User>>> GetUsers() {
 			var users = await _context.Users.ToListAsync();
@@ -25,6 +27,7 @@ namespace API.Controllers {
 			return users;
 		}
 
+		[Authorize]
 		[HttpGet("{id}")]
 		public async Task<ActionResult<User>> GetUser(int id) {
 			
